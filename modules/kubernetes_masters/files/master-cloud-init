@@ -1,0 +1,40 @@
+#cloud-config
+
+runcmd:
+  - mkdir -p ${data_dir}
+  - mount -a
+  - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+  - cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
+  - deb https://apt.kubernetes.io/ kubernetes-xenial main
+  - EOF
+  - echo -n "${private_ssh_key}" | base64 -d > /root/.ssh/master.pem && chmod 400 /root/.ssh/master.pem
+  - apt-get update
+  - apt-get install -y kubelet=${kubernetes_version}-00 kubeadm=${kubernetes_version}-00 kubectl=${kubernetes_version}-00
+  - apt-mark hold kubelet kubeadm kubectl
+  - wget -O azcopy.tar.gz https://aka.ms/downloadazcopylinux64 && tar -xf azcopy.tar.gz && ./install.sh
+  - /usr/bin/azcopy --source "${kubernetes_blob_endpoint}${sas_string}" --destination /etc/kubernetes/ --recursive
+  - mv /home/${username}/copy_certs.sh /etc/kubernetes/
+  - mv /home/${username}/kubeadm-config.yaml /etc/
+  - mv /home/${username}/master_bootstrap.sh /etc/kubernetes/
+  - chmod +x /etc/kubernetes/*.sh
+  - /etc/kubernetes/master_bootstrap.sh | tee /var/log/master_bootstrap.log
+
+package_update: true
+package_upgrade: true
+packages:
+  - apt-transport-https
+  - curl
+  - wget
+  - lsb-release
+  - software-properties-common
+  - dirmngr
+
+mounts:
+  - [sdc, /var/lib/etcd, ext4, defaults, "0", "0"]
+
+fs_setup:
+  - label: etcd
+    filesystem: "ext4"
+    device: "/dev/sdc"
+    partition: "auto"
+    overwrite: false

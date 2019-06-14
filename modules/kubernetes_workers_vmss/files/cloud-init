@@ -1,0 +1,26 @@
+#cloud-config
+
+runcmd:
+  - apt-get update && apt-get install -y apt-transport-https curl wget jq
+  - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+  - cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
+  - deb https://apt.kubernetes.io/ kubernetes-xenial main
+  - EOF
+  - apt-get update
+  - apt-get install -y kubelet=${kubernetes_version}-00 kubeadm=${kubernetes_version}-00 kubectl=${kubernetes_version}-00
+  - apt-mark hold kubelet kubeadm kubectl
+  - wget -O azcopy.tar.gz https://aka.ms/downloadazcopylinux64 && tar -xf azcopy.tar.gz && ./install.sh
+  - /usr/bin/azcopy --source "${kubernetes_blob_endpoint}${sas_string}" --destination /etc/kubernetes/ --recursive
+  - chmod +x /etc/kubernetes/*.sh
+  - nohup /etc/kubernetes/worker_bootstrap.sh | tee /var/log/worker_bootstrap.log &
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - apt-transport-https
+  - curl
+  - wget
+  - lsb-release
+  - software-properties-common
+  - dirmngr

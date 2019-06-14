@@ -1,0 +1,47 @@
+apiVersion: kubeadm.k8s.io/v1beta1
+kind: InitConfiguration
+bootstrapTokens:
+  - token: "${token}"
+    description: "Initial Joining token"
+    ttl: "8760h"
+nodeRegistration:
+  kubeletExtraArgs:
+  cloud-provider: "azure"
+  cloud-config: "/etc/kubernetes/cloud.conf"
+---
+apiVersion: kubeadm.k8s.io/v1beta1
+kind: ClusterConfiguration
+kubernetesVersion: v${kubernetes_version}
+etcd:
+  local:
+    dataDir: ${data_dir}
+apiServer:
+  extraArgs:
+    enable-admission-plugins: ${admission_plugins}
+    cloud-provider: "azure"
+    cloud-config: "/etc/kubernetes/cloud.conf"
+  extraVolumes:
+    - name: cloud
+      hostPath: "/etc/kubernetes/cloud.conf"
+      mountPath: "/etc/kubernetes/cloud.conf"
+  certSANs:
+    - kubernetes.default.svc.cluster.local
+    - kubernetes.default
+    - ${external_loadbalancer_endpoint}
+    - ${control_plane_endpoint}
+    - ${control_plane_ip0}
+    - ${control_plane_ip1}
+    - ${control_plane_ip2}
+controllerManager:
+  extraArgs:
+    cloud-provider: "azure"
+    cloud-config: "/etc/kubernetes/cloud.conf"
+  extraVolumes:
+    - name: cloud
+      hostPath: "/etc/kubernetes/cloud.conf"
+      mountPath: "/etc/kubernetes/cloud.conf"
+controlPlaneEndpoint: ${control_plane_endpoint}:6443
+networking:
+  podSubnet: ${pod_subnet}
+dns:
+  type: CoreDNS
