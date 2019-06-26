@@ -58,7 +58,7 @@ resource "azurerm_virtual_machine" "main" {
   }
 
   connection {
-    host        = "" # TF-UPGRADE-TODO: Set this to the IP address of the machine's primary network interface
+    host        = element(azurerm_public_ip.main.*.ip_address, count.index)
     type        = "ssh"
     user        = var.username
     private_key = var.private_ssh_key
